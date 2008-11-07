@@ -103,7 +103,7 @@ module Merb::Helpers::Form
   #   <%= form_for @person do %>
   #     <%= text_field :first_name, :label => "First Name" %>
   #     <%= text_field :last_name,  :label => "Last Name" %>
-  #     <%= fields_for :permission do %>
+  #     <%= fields_for @permission do %>
   #       <%= check_box :is_admin, :label => "Administrator" %>
   #     <% end =%>
   #     <%= submit "Create" %>
@@ -111,7 +111,7 @@ module Merb::Helpers::Form
   def fields_for(name, attrs = {}, &blk)
     attrs ||= {}
     with_form_context(name, attrs.delete(:builder)) do
-      yield
+      capture(&blk)
     end
   end
 
