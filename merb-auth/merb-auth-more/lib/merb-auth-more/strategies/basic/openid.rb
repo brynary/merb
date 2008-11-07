@@ -24,7 +24,7 @@ require 'openid/extensions/sreg'
 class Merb::Authentication
   module Strategies
     module Basic
-      class OpenID < Base
+      class OpenID < Merb::Authentication::Strategy
         def run!
           if request.params[:'openid.mode']
             response = consumer.complete(request.send(:query_params), "#{request.protocol}://#{request.host}" + request.path)
@@ -47,8 +47,8 @@ class Merb::Authentication
               openid_reg = ::OpenID::SReg::Request.new
               openid_reg.request_fields(required_reg_fields)
               openid_request.add_extension(openid_reg)
-              redirect_to = "#{request.protocol}://#{request.host}#{Merb::Router.url(:openid)}"
-              redirect!(openid_request.redirect_url("#{request.protocol}://#{request.host}", redirect_to))
+              customize_openid_request!(openid_request)
+              redirect!(openid_request.redirect_url("#{request.protocol}://#{request.host}", openid_callback_url))
             rescue ::OpenID::OpenIDError => e
               request.session.authentication.errors.clear!
               request.session.authentication.errors.add(:openid, 'The OpenID verification failed')
@@ -57,6 +57,22 @@ class Merb::Authentication
           end
         end # run!
         
+        
+        # Overwrite this to add extra options to the OpenID request before it is made.
+        # 
+        # @example request.return_to_args["remember_me"] = 1 # remember_me=1 is added when returning from the OpenID provider.
+        # 
+        # @api overwritable
+        def customize_openid_request!(openid_request)
+        end
+        
+        # Used to define the callback url for the openid provider.  By default it
+        # is set to the named :openid route.
+        # 
+        # @api overwritable
+        def openid_callback_url
+          "#{request.protocol}://#{request.host}#{Merb::Router.url(:openid)}"
+        end
         
         # Overwrite the on_success! method with the required behavior for successful logins
         #
