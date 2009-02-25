@@ -12,7 +12,7 @@ module Merb::Test
     def counter
       value = (cookies[:counter] || 0).to_i + 1
       cookies[:counter] = value
-      value
+      value.to_s
     end
     
     def delete
@@ -23,19 +23,19 @@ module Merb::Test
     def domain
       value = (cookies[:counter] || 0).to_i + 1
       set_cookie :counter, value, :domain => "foo.example.org"
-      value
+      value.to_s
     end
     
     def path
       value = (cookies[:counter] || 0).to_i + 1
       set_cookie :counter, value, :path => "/path/zomg"
-      value
+      value.to_s
     end
     
     def expires
       value = (cookies[:counter] || 0).to_i + 1
       set_cookie :counter, value, :expires => Time.now
-      value
+      value.to_s
     end
     
     def set

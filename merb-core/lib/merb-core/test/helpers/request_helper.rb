@@ -1,57 +1,30 @@
 require "rack"
+require "rack/test"
 
 module Merb
   module Test
     module MakeRequest
 
       def request(uri, env = {})
-        uri = url(uri) if uri.is_a?(Symbol)
-        uri = URI(uri)
-        uri.scheme ||= "http"
-        uri.host   ||= "example.org"
-
-        if (env[:method] == "POST" || env["REQUEST_METHOD"] == "POST")
-          params = env.delete(:body_params) if env.key?(:body_params)
-          params = env.delete(:params) if env.key?(:params) && !env.key?(:input)
-
-          unless env.key?(:input)
-            env[:input] = Merb::Parse.params_to_query_string(params)
-            env["CONTENT_TYPE"] = "application/x-www-form-urlencoded"
-          end
-        end
-
-        if env[:params]
-          uri.query = [
-            uri.query, Merb::Parse.params_to_query_string(env.delete(:params))
-          ].compact.join("&")
-        end
-        
-        ignore_cookies = env.has_key?(:jar) && env[:jar].nil?
-
-        unless ignore_cookies
-          # Setup a default cookie jar container
-          @__cookie_jar__ ||= Merb::Test::CookieJar.new
-          # Grab the cookie group name
+        if env.has_key?(:jar) && env[:jar].nil?
+          jar = nil
+        else
           jar = env.delete(:jar) || :default
-          # Add the cookies explicitly set by the user
-          @__cookie_jar__.update(jar, uri, env.delete(:cookie)) if env.has_key?(:cookie)
-          # Set the cookie header with the cookies
-          env["HTTP_COOKIE"] = @__cookie_jar__.for(jar, uri)
         end
         
-        app = Merb::Config[:app]
-        rack = app.call(::Rack::MockRequest.env_for(uri.to_s, env))
-
-        rack = Struct.new(:status, :headers, :body, :url, :original_env).
-          new(rack[0], rack[1], rack[2], uri.to_s, env)
-          
-        @__cookie_jar__.update(jar, uri, rack.headers["Set-Cookie"]) unless ignore_cookies
+        response = get_session(jar).request(uri.to_s, env)
 
         Merb::Dispatcher.work_queue.size.times do
           Merb::Dispatcher.work_queue.pop.call
         end
 
-        rack
+        response
+      end
+      
+      def get_session(name = :default)
+        return ::Rack::Test::Session.new(Merb::Config[:app]) unless name
+        @__sessions__ ||= {}
+        @__sessions__[name] ||= ::Rack::Test::Session.new(Merb::Config[:app])
       end
     end
     
